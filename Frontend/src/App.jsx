@@ -8,6 +8,9 @@ const App = () => {
   const [messages, setMessages] = useState([]);
   const [isDarkMode, setIsDarkMode] = useState(false); // State for dark mode
 
+  // Set the base URL based on the environment
+  const BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3001';
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const userMessage = { text: prompt, type: 'user' };
@@ -16,7 +19,7 @@ const App = () => {
     setMessages((prevMessages) => [...prevMessages, userMessage]);
 
     try {
-      const response = await axios.post('http://localhost:3001/generate-content', { prompt });
+      const response = await axios.post(`${BASE_URL}/generate-content`, { prompt });
       const botMessage = { text: response.data.text, type: 'bot' };
 
       // Add bot's response to the chat
