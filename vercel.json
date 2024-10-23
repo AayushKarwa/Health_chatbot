@@ -5,12 +5,12 @@
       "src": "frontend/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "frontend/build"
+        "distDir": "frontend/build"  
       }
     },
     {
       "src": "backend/server.js",
-      "use": "@vercel/node"
+      "use": "@vercel/node"  
     }
   ],
   "routes": [
@@ -19,12 +19,8 @@
       "dest": "backend/server.js"
     },
     {
-      "src": "/classify-image",
-      "dest": "backend/server.js"
-    },
-    {
       "src": "/(.*)",
-      "dest": "frontend/build/$1"
+      "dest": "frontend/build/$1" 
     }
   ]
 }
