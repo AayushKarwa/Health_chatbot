@@ -1,6 +1,7 @@
 import React, { useState } from 'react'; 
 import axios from 'axios';
 import './App.css';
+import { MdOutlineDarkMode } from "react-icons/md";
 
 const App = () => {
     const [prompt, setPrompt] = useState('');
@@ -9,7 +10,9 @@ const App = () => {
     const [selectedFile, setSelectedFile] = useState(null);
     const [isLoading, setIsLoading] = useState(false); 
 
-    const BASE_URL = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:3001';
+    const BASE_URL = process.env.NODE_ENV === 'production' 
+    ? '/api'  
+    : 'http://localhost:3001';
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -81,7 +84,8 @@ const App = () => {
         <div className={`chat-container ${isDarkMode ? 'dark-mode' : ''}`}>
             <h1 style={{ color: isDarkMode ? 'white' : 'black' }}>Health Chatbot v1</h1>
             <button onClick={toggleDarkMode} style={{ marginBottom: '20px' }}>
-                Toggle to {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+                
+                {isDarkMode ? ' Light Mode' : ' Dark Mode'} <MdOutlineDarkMode />
             </button>
             <div className={`messages ${isDarkMode ? 'dark-mode' : ''}`}>
                 {messages.map((message, index) => (
