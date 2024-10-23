@@ -1,4 +1,4 @@
-// ChatHistory.jsx
+
 import React from 'react';
 
 const ChatHistory = ({ history = [] }) => {

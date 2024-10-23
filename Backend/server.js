@@ -1,41 +1,112 @@
 const express = require('express');
 const cors = require('cors');
+const multer = require('multer'); 
+const axios = require('axios');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const path = require('path');
 require('dotenv').config();
+const fs = require('fs');
+const FormData = require('form-data');
 
-// Create Express app
+
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Initialize Google Generative AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const constraintMessage = 'You are a medical expert or consultant.Only respond with information related to health, medicines and diseases. If the following prompt is unrelated to health, please don’t respond and say you only have information about health.';
 
-// In-memory store for history
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir);
+}
+
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadsDir);
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({ storage });
+
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const constraintMessage = process.env.CONSTRAINT_MESSAGE;
+
+
+
 const history = [];
 
-app.post('/generate-content', async (req, res) => {
-    try {
-        const { prompt } = req.body;
 
-        // Validate the prompt
-        if (!prompt || prompt.length < 5) {
-            return res.status(400).json({ error: 'Prompt must be at least 5 characters long.' });
+app.post('/classify-image', upload.single('image'), async (req, res) => {
+    try {
+        const imagePath = req.file.path;
+        const userPrompt = req.body.prompt || ''; 
+
+        
+        const huggingFaceUrl = 'https://bilalsardar-skin-diseases-classification.hf.space/run/predict';
+        const imageBase64 = fs.readFileSync(imagePath, { encoding: 'base64' });
+        const response = await axios.post(huggingFaceUrl, {
+            data: [`data:image/png;base64,${imageBase64}`],
+        }, {
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+       
+        const responseData = response.data.data;
+        const [disease, description, symptoms, causes, treatment] = responseData;
+
+        console.log(`Identified disease: ${disease}`);
+        console.log(`Identified description: ${description}`);
+        console.log(`Identified symptoms: ${symptoms}`);
+        console.log(`Causes: ${causes}`);
+        console.log(`Learn more: ${treatment}`);
+
+       
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        let aiResponse = '';
+
+        try {
+            const diseases = disease || "diseases you know";
+            const combinedPrompt = `${constraintMessage} Provide short symptoms information based on ${diseases} and considering ${userPrompt}`;
+            const result = await model.generateContent(combinedPrompt);
+            aiResponse = await result.response.text();
+            console.log("Google response: " + aiResponse);
+        } catch (genError) {
+            console.error('Error generating content from Gemini API:', genError);
+            aiResponse = 'Sorry, we were unable to retrieve further information at this time.';
         }
 
-        // Generate content using the Gemini API
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const result = await model.generateContent(`${constraintMessage} ${prompt}`);
-        const aiResponse = await result.response.text();
+       
+        history.push({ disease, description, symptoms, causes, treatment, aiResponse });
 
-        // Store in history
-        history.push({ prompt, aiResponse });
+        
+        res.json({ disease, description, symptoms, causes, treatment, aiResponse });
 
-        res.json({ text: aiResponse, history });
     } catch (error) {
-        console.error('Error generating content:', error);
-        res.status(500).json({ error: 'Failed to generate content' });
+        console.error('Error classifying image or generating content:', error);
+        res.status(500).json({ error: 'Failed to classify image or generate content' });
+    }
+});
+
+
+app.post('/generate-response', async (req, res) => {
+    const userPrompt = req.body.prompt || '';
+    let aiResponse = '';
+
+    try {
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const combinedPrompt = `${constraintMessage} Provide information based on the user prompt: ${userPrompt}`;
+        
+        const result = await model.generateContent(combinedPrompt);
+        aiResponse = await result.response.text();
+
+        res.json({ aiResponse });
+    } catch (error) {
+        console.error('Error generating response from Gemini API:', error);
+        res.status(500).json({ error: 'Failed to generate response' });
     }
 });
 
@@ -43,7 +114,7 @@ app.get('/history', (req, res) => {
     res.json(history);
 });
 
-// Define the port
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

@@ -1,4 +1,3 @@
-// ChatInput.jsx
 import React, { useState } from 'react';
 
 const ChatInput = ({ sendMessage, loading }) => {
@@ -14,7 +13,7 @@ const ChatInput = ({ sendMessage, loading }) => {
   };
 
   return (
-    <div className="chat-input">
+    <div className="input-container">
       <input
         type="text"
         value={message}
@@ -22,12 +21,13 @@ const ChatInput = ({ sendMessage, loading }) => {
         placeholder="Type a message"
         disabled={loading}
       />
-      <label htmlFor="file-upload" className="file-upload-label">Upload Image</label>
       <input
         id="file-upload"
         type="file"
+        className="file-input"
         onChange={(e) => setImage(e.target.files[0])}
       />
+      <label htmlFor="file-upload" className="file-label">Choose File</label>
       <button onClick={handleSend} disabled={loading}>
         {loading ? 'Sending...' : 'Send'}
       </button>
